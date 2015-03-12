@@ -17,8 +17,8 @@ class Braintree:
     def __init__(self, user_name=None, password=None):
         self.s = requests.session()
         self.s.headers['User-Agent'] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_3) AppleWebKit/537.31 (KHTML, like Gecko) Chrome/26.0.1410.43 Safari/537.31'
-        self.s.headers['Accept-Encoding'] = "gzip,deflate,sdch"
-        self.s.headers['Accept'] = 'application/json, text/javascript, */*'
+        self.s.headers['Accept-Encoding'] = 'gzip,deflate,sdch'
+        self.s.headers['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
         self.s.headers['Accept-Language'] = 'en-US,en;q=0.8'
         self.s.headers['X-Requested-With'] = 'XMLHttpRequest'
         self.url_base = 'https://www.braintreegateway.com'
@@ -105,6 +105,7 @@ class Braintree:
                                         'settled', 'voided', 'processor_declined', 'gateway_rejected', 'failed'],
                     'search[type][]':['sale', 'credit']
                 }
+        sb_data['authenticity_token'] = self.auth_token
         dso_url = self.url_base + '/merchants/' + self.account_data['merchant_tag'] + '/transactions/download_advanced_search_results'
         dsr = self.s.post(dso_url, data=sb_data)
         time.sleep(wait_time)
@@ -124,17 +125,35 @@ class Braintree:
         dlp_url = self.url_base + '/merchants/' + self.account_data['merchant_tag'] + '/downloads/'
         dlf = self.s.get(dlp_url)
         dl_blocks = BeautifulSoup(dlf.text).find('div', attrs={'id':'categorized-downloads'}).find('div', attrs={'class':'block'}).findAll('div')
-        return [{'complete':b['data-complete'], 'date':b.find('span').text.strip(), 'download_url':b.find('a')['href']} for b in dl_blocks]
+        return [{'complete':b['data-complete'], 'date':b.find('span').text.strip(), 'download_url':b.find('a')['href'].rstrip('/delete')} for b in dl_blocks]
     
     def download_tag(self, download_dict):
-        self.check_logged_in()
-        dlp_url = self.url_base + download_dict['download_url']
-        dl = self.s.get(dlp_url)
-        df = pd.read_csv(StringIO(dl.text))
-        if len(df.columns) <= 1:
+        try:
+            self.check_logged_in()
+            dlp_url = self.url_base + download_dict['download_url']
+            dl = self.s.get(dlp_url)
+            df = pd.read_csv(StringIO(dl.text))
+            if len(df.columns) <= 1:
+                return False
+            if download_dict['type'] == 'disbursement':
+                self.disbursement_data.append(df)
+            else:
+                self.settlement_data.append(df)
+            return True
+        except Exception:
             return False
-        if download_dict['type'] == 'disbursement':
-            self.disbursement_data.append(df)
-        else:
-            self.settlement_data.append(df)
-        return True
+        
+    def load_download_queue(self, wait_time=None):
+        self.check_logged_in()
+        dtags = self.find_download_tags()
+        for i, dl in enumerate(self.download_queue):
+            for tag in dtags:
+                if dl['download_url'] == tag['download_url'] and tag['complete']=='true':
+                    if not bt.download_tag(dl):
+                        print dl['type'] + ' load failed: sorry bro'
+                    self.download_queue.pop(i)
+        if wait_time is not None and len(self.download_queue) > 0:
+            print 'Waiting Again'
+            time.sleep(wait_time)
+            self.load_download_queue(wait_time=None)
+
