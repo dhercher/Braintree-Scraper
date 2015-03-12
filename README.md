@@ -27,4 +27,8 @@ bt.disbursement_data # Might have the data you want or its in the download_queue
 # Load Settlement Data For Yesterday
 bt.load_settlement_batch_report(date_min, wait_time=30)
 bt.settlement_data # Might have the data you want or its in the download_queue
+
+# Loads All Data in Download Queue and Stores in bt objects
+# Using wait_time it will attemp to load and then wait_time seconds and retry once more
+bt.load_download_queue(wait_time=50)
 ```
