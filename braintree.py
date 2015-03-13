@@ -149,7 +149,7 @@ class Braintree:
         for i, dl in enumerate(self.download_queue):
             for tag in dtags:
                 if dl['download_url'] == tag['download_url'] and tag['complete']=='true':
-                    if not bt.download_tag(dl):
+                    if not self.download_tag(dl):
                         print dl['type'] + ' load failed: sorry bro'
                     self.download_queue.pop(i)
         if wait_time is not None and len(self.download_queue) > 0:
