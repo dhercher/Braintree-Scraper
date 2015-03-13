@@ -1,5 +1,8 @@
 # Braintree-Scraper
-
+  - install using
+```
+pip install Braintree_Scraper
+```
 ## This is used to scrape data from Braintree's website
   - You can scrape settlement and disbursement data
   - Because of lag time while loading there is a download queue that still needs to be fully built out
@@ -9,6 +12,8 @@
 
 
 ```python
+from Braintree_Scraper.braintree import Braintree
+
 # Dates For Searching
 date_max = datetime.now()
 date_min = datetime.now() - timedelta(7)
