@@ -124,8 +124,15 @@ class Braintree:
         self.check_logged_in()
         dlp_url = self.url_base + '/merchants/' + self.account_data['merchant_tag'] + '/downloads/'
         dlf = self.s.get(dlp_url)
-        dl_blocks = BeautifulSoup(dlf.text).find('div', attrs={'id':'categorized-downloads'}).find('div', attrs={'class':'block'}).findAll('div')
-        return [{'complete':b['data-complete'], 'date':b.find('span').text.strip(), 'download_url':b.find('a')['href'].rstrip('/delete')} for b in dl_blocks]
+        trans_div = []
+        in_section = False
+        for sp in BeautifulSoup(dlf.text).find('div', attrs={'id':'categorized-downloads'}).find('div', attrs={'class':'block'}).findAll():
+            if sp.text == 'Transaction Searches':
+                in_section = True
+
+            if in_section and sp.name == 'div':
+                trans_div.append(sp)
+        return [{'complete':b['data-complete'], 'date':b.find('span').text.strip(), 'download_url':b.find('a')['href'].rstrip('/delete')} for b in trans_div]        
     
     def download_tag(self, download_dict):
         try:
